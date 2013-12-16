@@ -3,42 +3,48 @@
 
 int main( int argc, char* argv[] )
 {
-    {
-	    long weight = 0;
-	    bool isMatch = FuzzySearch::IsMatch( "Asd Dsa asd", "", weight );
+  {
+	  std::vector< unsigned int > maxWeightSequence;
+	  bool isMatch = FuzzySearch().IsMatch( "Asd Dsa asd", "", maxWeightSequence );
 
-		_ASSERT( isMatch == true && weight == 0 );
+		_ASSERT( isMatch == true );
 	}
 
 	{
-	    long weight = 0;
-	    bool isMatch = FuzzySearch::IsMatch( "Asd Dsa asd", " \\ \\", weight );
+    std::vector< unsigned int > maxWeightSequence;
+	  bool isMatch = FuzzySearch().IsMatch( "Asd Dsa asd", " \\ \\", maxWeightSequence );
 
-		_ASSERT( isMatch == true && weight == 0 );
+		_ASSERT( isMatch == true );
 	}
 
 	{
-	    long weight = 0;
-	    bool isMatch = FuzzySearch::IsMatch( "Asd Dsa asd", "adsk", weight );
+    std::vector< unsigned int > maxWeightSequence;
+	  bool isMatch = FuzzySearch().IsMatch( "Asd Dsa asd", "adsk", maxWeightSequence );
 
-		_ASSERT( isMatch == false && weight == 0 );
+		_ASSERT( isMatch == false );
 	}
 
 	{
-		long weight1 = 0;
-		bool isMatch1 = FuzzySearch::IsMatch( "Asd Dsa asd", "ads", weight1 );
+    std::vector< unsigned int > maxWeightSequence1;
+		bool isMatch1 = FuzzySearch().IsMatch( "Asd Dsa asd", "ads", maxWeightSequence1 );
 
-		long weight2 = 0;
-		bool isMatch2 = FuzzySearch::IsMatch( "Asd Dsa asd", "a ds", weight2 );
+    std::vector< unsigned int > maxWeightSequence2;
+		bool isMatch2 = FuzzySearch().IsMatch( "Asd Dsa asd", "a ds", maxWeightSequence2 );
 
-		long weight3 = 0;
-		bool isMatch3 = FuzzySearch::IsMatch( "Asd Dsa asd", " ad\\s", weight3 );
+    std::vector< unsigned int > maxWeightSequence3;
+		bool isMatch3 = FuzzySearch().IsMatch( "Asd Dsa asd", " ad\\s", maxWeightSequence3 );
 
-		long weight4 = 0;
-		bool isMatch4 = FuzzySearch::IsMatch( "Asd Dsa asd", "ads\\", weight4 );
+    std::vector< unsigned int > maxWeightSequence4;
+		bool isMatch4 = FuzzySearch().IsMatch( "Asd Dsa asd", "ads\\", maxWeightSequence4 );
 
-		_ASSERT( ( isMatch1 == isMatch2 ) && ( isMatch2 == isMatch3 ) && ( isMatch3 == isMatch4 ) && ( isMatch4 == true ) &&
-			     ( weight1 == weight2 ) && ( weight2 == weight3 ) && ( weight3 == weight4 ) && ( weight4 == 6 ) );
+		_ASSERT( ( isMatch1 == isMatch2 ) && ( isMatch2 == isMatch3 ) && 
+             ( isMatch3 == isMatch4 ) && ( isMatch4 == true ) &&
+			       ( maxWeightSequence1 == maxWeightSequence2 ) && ( maxWeightSequence2 == maxWeightSequence3 ) && 
+             ( maxWeightSequence3 == maxWeightSequence4 ) );
+
+    for each( unsigned int index in maxWeightSequence1 )
+      std::cout << index << " ";
+    std::cout << std::endl;
 	}
 
 	std::cout << "all test executed" << std::endl 

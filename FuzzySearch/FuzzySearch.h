@@ -1,7 +1,16 @@
 #include <string>
+#include <vector>
+
+class FuzzySearchPrivate;
 
 class FuzzySearch
 {
 public:
-	static bool IsMatch( const std::string& str, const std::string& searchStr, long& weight );
+  FuzzySearch();
+  ~FuzzySearch();
+
+	bool IsMatch( const std::string& str, const std::string& searchStr, std::vector< unsigned int >& maxWeightSequence );
+
+private:
+  FuzzySearchPrivate* d;
 };

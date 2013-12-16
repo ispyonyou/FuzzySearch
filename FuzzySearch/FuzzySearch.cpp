@@ -1,95 +1,152 @@
 #include "FuzzySearch.h"
 #include <map>
 #include <vector>
-#include <memory>
+#include <iostream>
+#include <algorithm>
 
-class IndexesTreeItem
+class FuzzySearchPrivate
 {
 public:
-	unsigned int Index;
-	std::vector< std::shared_ptr< IndexesTreeItem > > Childs;
-
-public:
-	bool initChilds( unsigned int lettreNum, const std::string& search );
-};
-
-bool IndexesTreeItem::initChilds( unsigned int lettreNum, const std::string& search )
-{
-	char c = search[ lettreNum ];
-
-	return true;
-}
-
-class IndexesTreeCreator
-{
-public:
-	bool createIndexesTree( const std::string& str, const std::string& searchStr );
+  bool IsMatch( const std::string& searchInStr, const std::string& searchWhatStr, std::vector< unsigned int >& maxWeightSequence );
 
 private:
-	bool initChildIndexes( IndexesTreeItem& item, unsigned int searchLetterIndex );
+  void findMatchedSequences();
+  void appendNextLetter( std::vector< unsigned int >& accumulator );
+  unsigned int calcWeight( const std::vector< unsigned int >& sequence );
 
 private:
-	std::string SearcStr;
-	std::map< char, std::vector< unsigned int > > SearchLetterIndexes;
+  std::map< char, std::vector< unsigned int > > LetterIndexes;
+  std::string SearchWhatStr;
+  std::vector< std::vector< unsigned int > > MatchedSequences;
 };
 
-bool IndexesTreeCreator::createIndexesTree( const std::string& str, const std::string& searchStr )
+bool FuzzySearchPrivate::IsMatch( const std::string& searchInStr, const std::string& searchWhatStr, std::vector< unsigned int >& maxWeightSequence )
 {
-	SearchLetterIndexes.clear();
-	SearcStr = searchStr;
+  MatchedSequences.clear();
+  LetterIndexes.clear();
+  SearchWhatStr = searchWhatStr;
 
-	for( unsigned int i = 0; i < str.size(); i++ )
-	{
-		for each( const char c in SearcStr )
-		{
-			if( str[ i ] == c )
-			{
-				SearchLetterIndexes[ c ].push_back( i );
-				break;
-			}
-		}
-	}
+  for( unsigned int i = 0; i < searchInStr.size(); i++ )
+  {
+    for each( const char c in SearchWhatStr )
+    {
+      if( searchInStr[ i ] == c )
+      {
+        LetterIndexes[ c ].push_back( i );
+        break;
+      }
 
-	for each( const char c in SearcStr )
-		if( SearchLetterIndexes[ c ].empty() )
-			return false;
+      if( searchInStr[ i ] == ' ' || searchInStr[ i ] == '\\' )
+      {
+        // all separators store as ' '
+        LetterIndexes[ ' ' ].push_back( i );
+        break;
+      }
+    }
+  }
 
-	IndexesTreeItem root;
-	root.Index = -1;
-	
-	if( !initChildIndexes( root, 0 ) )
-		return false;
+  for each( const char c in SearchWhatStr )
+    if( LetterIndexes[ c ].empty() )
+      return false;
 
-	return true;
+  findMatchedSequences();
+
+  if( !MatchedSequences.size() )
+    return false;
+
+  unsigned int maxWeight = 0;
+  unsigned int maxWeightSeqIndex = 0;
+  for( unsigned int i = 0; i < MatchedSequences.size(); i++ )
+  {
+    unsigned int weight = calcWeight( MatchedSequences[ i ] );
+    if( weight > maxWeight )
+    {
+      maxWeight = weight;
+      maxWeightSeqIndex = i;
+    }
+  }
+
+  maxWeightSequence = MatchedSequences[ maxWeightSeqIndex ];
+
+  return true;
 }
 
-bool IndexesTreeCreator::initChildIndexes( IndexesTreeItem& item, unsigned int searchLetterIndex )
+void FuzzySearchPrivate::findMatchedSequences()
 {
-	const char letter = SearcStr[ searchLetterIndex ];
-	const std::vector< unsigned int >& letterIndexes = SearchLetterIndexes[ letter ];
-
-	for( unsigned int i = 0; i < letterIndexes.size(); i++ )
-	{
-		if( letterIndexes[ i ] <= item.Index )
-			continue;
-
-		std::shared_ptr< IndexesTreeItem > child( new IndexesTreeItem() );
-		child->Index = letterIndexes[ i ];
-
-		if( searchLetterIndex == SearcStr.size() - 1 )
-		{
-			item.Childs.push_back( child );
-			continue;
-		}
-
-		if( initChildIndexes( *child.get(), searchLetterIndex + 1 ) )
-			item.Childs.push_back( child );
-	}
-
-	return ( item.Childs.size() > 0 );
+  std::vector< unsigned int > accumulator;
+  appendNextLetter( accumulator );
 }
 
-bool FuzzySearch::IsMatch( const std::string& str, const std::string& searchStr, long& weight )
+void FuzzySearchPrivate::appendNextLetter( std::vector< unsigned int >& accumulator )
+{
+  _ASSERT( accumulator.size() < SearchWhatStr.length() );
+
+  const char letter = SearchWhatStr[ accumulator.size() ];
+  const std::vector< unsigned int >& curletterIndexes = LetterIndexes[ letter ];
+
+  for( unsigned int i = 0; i < curletterIndexes.size(); i++ )
+  {
+    if( ( accumulator.size() > 0 ) && ( curletterIndexes[ i ] <= accumulator.back() ) )
+      continue;
+
+    if( accumulator.size() == SearchWhatStr.size() - 1 ) // last charcter in searching sequence
+    {
+      accumulator.push_back( curletterIndexes[ i ] );
+      MatchedSequences.push_back( accumulator );
+      accumulator.pop_back();
+
+      continue;
+    }
+
+    accumulator.push_back( curletterIndexes[ i ] );
+    appendNextLetter( accumulator );
+    accumulator.pop_back();
+  }
+}
+
+unsigned int FuzzySearchPrivate::calcWeight( const std::vector< unsigned int >& sequence )
+{
+  unsigned int weight = 0;
+  const std::vector< unsigned int >& separatorIndexes = LetterIndexes[ ' ' ];
+
+  for( unsigned int i = 0; i < sequence.size(); i++ )
+  {
+    unsigned int index = sequence[ i ];
+    unsigned int prevIndex = i > 0 ? sequence[ i - 1 ] : -1;
+    if( index == 0 )
+    {
+      weight += 2;
+      continue;
+    }
+
+    if( prevIndex + 1 == index )
+    {
+      weight += 2;
+      continue;
+    }
+
+    // if previous symbol is separator
+    if( std::binary_search( separatorIndexes.begin(), separatorIndexes.end(), index - 1 ) )
+    {
+      weight += 2;
+      continue;
+    }
+  }
+
+  return weight;
+}
+
+FuzzySearch::FuzzySearch()
+{
+  d = new FuzzySearchPrivate();
+}
+
+FuzzySearch::~FuzzySearch()
+{
+  delete d;
+}
+
+bool FuzzySearch::IsMatch( const std::string& str, const std::string& searchStr, std::vector< unsigned int >& maxWeightSequence )
 {
 	std::string clearedSearchStr;
 	for( unsigned int i = 0; i < searchStr.size(); i++ )
@@ -99,28 +156,10 @@ bool FuzzySearch::IsMatch( const std::string& str, const std::string& searchStr,
 	if( clearedSearchStr.empty() )
 		return true;
 
-	IndexesTreeCreator().createIndexesTree( str, clearedSearchStr );
+  std::string searchInStr = str;
 
-	std::map< char, std::vector< unsigned int > > searchLetterIndexes;
-	for( unsigned int i = 0; i < str.size(); i++ )
-	{
-		for each( const char c in clearedSearchStr )
-		{
-			if( str[ i ] == c )
-			{
-				searchLetterIndexes[ c ].push_back( i );
-				break;
-			}
-		}
-	}
+  std::transform( searchInStr.begin(), searchInStr.end(), searchInStr.begin(), ::tolower );
+  std::transform( clearedSearchStr.begin(), clearedSearchStr.end(), clearedSearchStr.begin(), ::tolower );
 
-	for each( const char c in clearedSearchStr )
-		if( searchLetterIndexes[ c ].empty() )
-			return false;
-
-	IndexesTreeItem root;
-	root.Index = -1;
-	root.initChilds( 0, clearedSearchStr );
-
-	return true;
+  return d->IsMatch( searchInStr, clearedSearchStr, maxWeightSequence );
 }
